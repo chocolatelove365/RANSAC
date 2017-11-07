@@ -37,8 +37,7 @@ void draw_circle(float cx, float cy, float cz, float nx, float ny, float nz, flo
     Eigen::Vector3f z_axis(nx, ny, nz);
     z_axis.normalize();
     Eigen::Vector3f x_axis;
-    if(z_axis(1) != 0.0f) x_axis << 1.0f, -z_axis(0)/z_axis(1), 0.0f;
-    else x_axis << 0.0f, 1.0f, 0.0f;
+    x_axis << z_axis(1), -z_axis(0), 0.0f;
     x_axis.normalize();
     Eigen::Vector3f y_axis = z_axis.cross(x_axis);
     z_axis.normalize();

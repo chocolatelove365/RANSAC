@@ -27,9 +27,9 @@ Eigen::MatrixXd rt;
 Eigen::Matrix4d m;
 
 const float radius = 2.0f;
-const int n_inliers = 300;
-const int n_outliers = 200;
-const float noise_scale = 0.2f;
+const int n_inliers = 200;
+const int n_outliers = 0;
+const float noise_scale = 0.05f;
 Eigen::Vector3f center(0.f, 0.f, 0.f);
 Eigen::Vector3f normal(2.f, 0.f, 2.f);
 Eigen::MatrixXf points(3, n_inliers+n_outliers);
@@ -43,8 +43,7 @@ void update_points(){
     Eigen::Vector3f z_axis = normal;
     z_axis.normalize();
     Eigen::Vector3f x_axis;
-    if(z_axis(1) != 0.0f) x_axis << 1.0f, -z_axis(0)/z_axis(1), 0.0f;
-    else x_axis << 0.0f, 1.0f, 0.0f;
+    x_axis << z_axis(1), -z_axis(0), 0.0f;
     x_axis.normalize();
     Eigen::Vector3f y_axis = z_axis.cross(x_axis);
     z_axis.normalize();
@@ -53,7 +52,11 @@ void update_points(){
         float x, y, z;
         x = cosf(i * 2 * M_PI / n_inliers) * radius + rnd(engine) * noise_scale;
         y = sinf(i * 2 * M_PI / n_inliers) * radius + rnd(engine) * noise_scale;
+#if 1
         z = 0.0f + rnd(engine) * noise_scale;
+#else
+        z = 0.0f;
+#endif
         points.col(i) = x * x_axis + y * y_axis + z * z_axis + origin;
     }
     uniform_real_distribution<> rnd2(-5.0, 5.0);
@@ -86,13 +89,17 @@ void disp(){
     Eigen::Matrix4d m_inv = m.inverse();
     glMultMatrixd(m_inv.data());
     if(rt.data() != NULL) glMultMatrixd(rt.data());
-    
     Eigen::Vector3f pred_center, pred_normal;
     float pred_r;
-    ransac_circle_param(points, pred_center, pred_normal, pred_r, 100, 5.0, 10);
+    ransac_circle_param(points, pred_center, pred_normal, pred_r, 200, 0.2, 50);
     draw_xyz_axis(2.f);
-    cout << "pred_normal: \n" << pred_normal << "\n";
+    cout << "pred_normal:\n" << pred_normal << "\n";
+    glColor4f(1.f, 1.f, 0.f, 1.f);
+    draw_circle(pred_center, pred_normal, pred_r, 64);
+    glColor4f(1.f, 1.f, 1.f, 1.f);
+#if 0
     draw_circle(center, normal, radius, 64);
+#endif
     draw_points(points, 3.0f);
 
     glutSwapBuffers();

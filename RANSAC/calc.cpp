@@ -56,8 +56,23 @@ void calc_circle_param(Eigen::Matrix<float, 2, Eigen::Dynamic> points, float &cx
 void calc_circle_param(Eigen::Matrix3f points, Eigen::Vector3f &center, Eigen::Vector3f &normal, float &r){
     Eigen::Matrix3f PT = points.transpose();
     Eigen::Matrix3f PT_inv = PT.inverse();
-    normal = (PT_inv * Eigen::Vector3f::Ones()).normalized();
-//    Eigen::Matrix<float, 2, Eigen::Dynamic> points2d = points.topRows(2);
+    Eigen::Vector3f z_axis = PT_inv * Eigen::Vector3f::Ones();
+    Eigen::Vector3f x_axis(z_axis(1), -z_axis(0), 0.0f);
+    z_axis.normalize();
+    x_axis.normalize();
+    Eigen::Vector3f y_axis = z_axis.cross(x_axis);
+    Eigen::Matrix3f R;
+    R << x_axis, y_axis, z_axis;
+    Eigen::Matrix3f _points = R.inverse() * points;
+    cout << "points: \n" << _points << "\n";
+    float _cx, _cy, _cz;
+    Eigen::Matrix<float, 2, Eigen::Dynamic> _points2d = _points.topRows(2);
+    _cz = _points(2, 0);
+    calc_circle_param(_points2d, _cx, _cy, r);
+    Eigen::Vector3f _center(_cx, _cy, _cz);
+    center = R * _center;
+    normal = z_axis;
+    cout << "_cx: " << _cx << ", _cy: " << _cy << ", r: " << r << "\n";
 }
 
 void ransac_circle_param(Eigen::Matrix<float, 3, Eigen::Dynamic> points, Eigen::Vector3f &center, Eigen::Vector3f &normal, float &r, int max_loop, float threshold, int min_inliers){
@@ -67,7 +82,7 @@ void ransac_circle_param(Eigen::Matrix<float, 3, Eigen::Dynamic> points, Eigen::
         cout << "ERROR: At least " << n_samples << " points are needed to calculate the parameter of circle.\n";
         return;
     }
-    vector<Eigen::Vector3f> good_center;
+    vector<Eigen::Vector3f> good_center, good_normal;
     vector<float> good_r, good_error;
     for(int i = 0; i < max_loop; i++){
         Eigen::MatrixXf samples(3, n_samples);
@@ -76,7 +91,7 @@ void ransac_circle_param(Eigen::Matrix<float, 3, Eigen::Dynamic> points, Eigen::
         vector<int> id = get_ramdom_values(n_samples, 0, n_points-1);
         for(int j = 0; j < n_samples; j++) samples.col(j) = points.col(id[j]);
         calc_circle_param(samples, _center, _normal, _r);
-#if 1
+#if 0
         cout << "samples: \n" << samples << "\n";
         Eigen::Vector3f tmp = samples.col(0) - samples.col(1);
         tmp.normalize();
@@ -86,7 +101,7 @@ void ransac_circle_param(Eigen::Matrix<float, 3, Eigen::Dynamic> points, Eigen::
         Eigen::Matrix<float, 3, Eigen::Dynamic> inliers;
 
         for(int j = 0; j < n_points; j++){
-            float circle_error = get_circle_error(points.col(j), _center, _r);
+            float circle_error = abs(get_circle_error(points.col(j), _center, _r));
             if(circle_error > threshold) continue;
             else{
                 inliers.conservativeResize(inliers.rows(), inliers.cols()+1);
@@ -98,6 +113,7 @@ void ransac_circle_param(Eigen::Matrix<float, 3, Eigen::Dynamic> points, Eigen::
             for(int j = 0; j < n_points; j++) current_error += abs(get_circle_error(points.col(j), _center, _r));
             current_error /= n_points;
             good_center.push_back(_center);
+            good_normal.push_back(_normal);
             good_r.push_back(_r);
             good_error.push_back(current_error);
         }
@@ -113,6 +129,7 @@ void ransac_circle_param(Eigen::Matrix<float, 3, Eigen::Dynamic> points, Eigen::
             }
         }
         center = good_center[best_index];
+        normal = good_normal[best_index];
         r = good_r[best_index];
     }
 }
