@@ -29,6 +29,10 @@ void draw_circle(Eigen::Vector3f center, Eigen::Vector3f normal, float radius, i
 }
 
 void draw_circle(float cx, float cy, float cz, float nx, float ny, float nz, float radius, int sides){
+    if(nx == 0 && ny == 0 && nz == 0){
+        cout << "ERROR: Normal is zero vector.\n";
+        return;
+    }
     Eigen::Vector3f origin(cx , cy, cz);
     Eigen::Vector3f z_axis(nx, ny, nz);
     z_axis.normalize();
@@ -45,7 +49,6 @@ void draw_circle(float cx, float cy, float cz, float nx, float ny, float nz, flo
         y = sinf(i * 2 * M_PI / sides) * radius;
         z = 0.0f;
         Eigen::Vector3f vtx = x * x_axis + y * y_axis + z * z_axis + origin;
-        cout << "vtx: " << vtx << "\n";
         vtxs[i*3+0] = vtx(0);
         vtxs[i*3+1] = vtx(1);
         vtxs[i*3+2] = vtx(2);

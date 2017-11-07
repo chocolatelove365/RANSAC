@@ -87,9 +87,11 @@ void disp(){
     glMultMatrixd(m_inv.data());
     if(rt.data() != NULL) glMultMatrixd(rt.data());
     
-    float pre_cx, pre_cy, pre_r;
-    ransac_circle_param(points, pre_cx, pre_cy, pre_r, 100, 5.0, 10);
+    Eigen::Vector3f pred_center, pred_normal;
+    float pred_r;
+    ransac_circle_param(points, pred_center, pred_normal, pred_r, 100, 5.0, 10);
     draw_xyz_axis(2.f);
+    cout << "pred_normal: \n" << pred_normal << "\n";
     draw_circle(center, normal, radius, 64);
     draw_points(points, 3.0f);
 
