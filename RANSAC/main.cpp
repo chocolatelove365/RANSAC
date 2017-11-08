@@ -7,15 +7,20 @@
 //
 
 #include <iostream>
+#include <fstream>
 #include <OpenGL/OpenGL.h>
 #include <GLUT/GLUT.h>
 #include <Eigen/Core>
 #include <Eigen/Geometry>
 #include <random>
+#include "json.hpp"
 #include "draw.hpp"
 #include "calc.hpp"
 
+using json = nlohmann::json;
 using namespace std;
+
+Eigen::MatrixXf model_points, model_out_circle, model_in_circle;
 
 double fov;
 double aspect;
@@ -33,6 +38,53 @@ const float noise_scale = 0.05f;
 Eigen::Vector3f center(0.f, 0.f, 0.f);
 Eigen::Vector3f normal(2.f, 0.f, 2.f);
 Eigen::MatrixXf points(3, n_inliers+n_outliers);
+
+bool load_model_json(const char *path){
+    std::ifstream input_json(path);
+    if(input_json.is_open()){
+        json j;
+        input_json >> j;
+        int m, n;
+        std::vector<std::vector<double>> model = j["model"];
+        n = (int)model.size();
+        if(n == 0) return false;
+        m = (int)model[0].size();
+        if(m == 0) return false;
+        model_points = Eigen::MatrixXf(m, n);
+        for(int i = 0; i < n; i++){
+            for(int j = 0; j < m; j++){
+                model_points(j, i) = model[i][j];
+            }
+        }
+        std::vector<std::vector<double>> model2 = j["model_out_circle"];
+        n = (int)model2.size();
+        if(n == 0) return false;
+        m = (int)model2[0].size();
+        if(m == 0) return false;
+        model_out_circle = Eigen::MatrixXf(m, n);
+        for(int i = 0; i < n; i++){
+            for(int j = 0; j < m; j++){
+                model_out_circle(j, i) = model2[i][j];
+            }
+        }
+        std::vector<std::vector<double>> model3 = j["model_in_circle"];
+        n = (int)model3.size();
+        if(n == 0) return false;
+        m = (int)model3[0].size();
+        if(m == 0) return false;
+        model_in_circle = Eigen::MatrixXf(m, n);
+        for(int i = 0; i < n; i++){
+            for(int j = 0; j < m; j++){
+                model_in_circle(j, i) = model3[i][j];
+            }
+        }
+        return true;
+    }
+    else{
+        cout << "ERROR: Could not open json file\n";
+        return false;
+    }
+}
 
 void update_points(){
     random_device seed_gen;
@@ -68,12 +120,13 @@ void update_points(){
 }
 
 void init(){
+    load_model_json("model.json");
     fov = 30.0;
     aspect = 1.0;
     m <<
     1.0, 0.0, 0.0, 0.0,
     0.0, 1.0, 0.0, 0.0,
-    0.0, 0.0, 1.0, 10.0,
+    0.0, 0.0, 1.0, 20.0,
     0.0, 0.0, 0.0, 1.0;
     update_points();
 }
@@ -91,17 +144,27 @@ void disp(){
     if(rt.data() != NULL) glMultMatrixd(rt.data());
     Eigen::Vector3f pred_center, pred_normal;
     float pred_r;
-    ransac_circle_param(points, pred_center, pred_normal, pred_r, 200, 0.2, 50);
+    Eigen::Vector3f pred_center2, pred_normal2;
+    float pred_r2;
+//    ransac_circle_param(points, pred_center, pred_normal, pred_r, 200, 0.1, 100);
+    ransac_circle_param(model_out_circle, pred_center, pred_normal, pred_r, 200, 0.05, 10);
+    ransac_circle_param(model_in_circle, pred_center2, pred_normal2, pred_r2, 200, 0.1, 10);
     draw_xyz_axis(2.f);
     cout << "pred_normal:\n" << pred_normal << "\n";
-    glColor4f(1.f, 1.f, 0.f, 1.f);
-    draw_circle(pred_center, pred_normal, pred_r, 64);
     glColor4f(1.f, 1.f, 1.f, 1.f);
 #if 0
     draw_circle(center, normal, radius, 64);
 #endif
+#if 0
     draw_points(points, 3.0f);
-
+#endif
+    draw_points(model_points, 2.0f);
+    glColor4f(0.f, 1.f, 1.f, 1.f);
+    draw_points(model_out_circle, 4.0f);
+    draw_circle(pred_center, pred_normal, pred_r, 64);
+    glColor4f(0.f, 0.f, 1.f, 1.f);
+    draw_points(model_in_circle, 4.0f);
+    draw_circle(pred_center2, pred_normal2, pred_r2, 64);
     glutSwapBuffers();
 }
 
@@ -112,6 +175,19 @@ void key(unsigned char key, int x, int y){
             glutSwapBuffers();
             break;
         default:
+            break;
+    }
+}
+
+void special_key(int key, int x, int y){
+    switch(key){
+        case GLUT_KEY_UP:
+            m(3, 3) += 0.05;
+            glutPostRedisplay();
+            break;
+        case GLUT_KEY_DOWN:
+            m(3, 3) -= 0.05;
+            glutPostRedisplay();
             break;
     }
 }
@@ -151,12 +227,9 @@ int main(int argc, char * argv[]) {
     glutInitWindowPosition(0, 100);
     glutInitDisplayMode(GLUT_DOUBLE | GLUT_RGBA | GLUT_DEPTH);
     glutCreateWindow("OpenGLTest");
-#if LINE
-    glutDisplayFunc(disp_line);
-#else
     glutDisplayFunc(disp);
-#endif
     glutKeyboardFunc(key);
+    glutSpecialFunc(special_key);
     glutMouseFunc(mouse);
     glutMotionFunc(motion);
     init();

@@ -21,8 +21,10 @@ vector<int> get_ramdom_values(int num, int min, int max){
     return result;
 }
 
-float get_circle_error(Eigen::Vector3f point, Eigen::Vector3f center, float r){
-    return (point - center).norm() - r;
+float get_circle_error(Eigen::Vector3f point, Eigen::Vector3f center, Eigen::Vector3f normal, float r){
+    Eigen::Vector3f v1 = point - center;
+    Eigen::Vector3f v2 = normal.cross(v1.cross(normal));
+    return (v1-v2).norm();
 }
 
 void calc_circle_param(Eigen::Matrix<float, 2, Eigen::Dynamic> points, float &cx, float &cy, float &r){
@@ -91,17 +93,10 @@ void ransac_circle_param(Eigen::Matrix<float, 3, Eigen::Dynamic> points, Eigen::
         vector<int> id = get_ramdom_values(n_samples, 0, n_points-1);
         for(int j = 0; j < n_samples; j++) samples.col(j) = points.col(id[j]);
         calc_circle_param(samples, _center, _normal, _r);
-#if 0
-        cout << "samples: \n" << samples << "\n";
-        Eigen::Vector3f tmp = samples.col(0) - samples.col(1);
-        tmp.normalize();
-        cout << "normal: \n" << _normal << "\n";
-        cout << "normal x tmp: \n" << _normal.cross(tmp).norm() << "\n";
-#endif
         Eigen::Matrix<float, 3, Eigen::Dynamic> inliers;
 
         for(int j = 0; j < n_points; j++){
-            float circle_error = abs(get_circle_error(points.col(j), _center, _r));
+            float circle_error = get_circle_error(points.col(j), _center, _normal, _r);
             if(circle_error > threshold) continue;
             else{
                 inliers.conservativeResize(inliers.rows(), inliers.cols()+1);
@@ -110,7 +105,7 @@ void ransac_circle_param(Eigen::Matrix<float, 3, Eigen::Dynamic> points, Eigen::
         }
         if(inliers.cols() > min_inliers){
             float current_error = 0;
-            for(int j = 0; j < n_points; j++) current_error += abs(get_circle_error(points.col(j), _center, _r));
+            for(int j = 0; j < n_points; j++) current_error += get_circle_error(points.col(j), _center, _normal, _r);
             current_error /= n_points;
             good_center.push_back(_center);
             good_normal.push_back(_normal);
