@@ -24,6 +24,10 @@ void draw_points(Eigen::Matrix<float, 3, Eigen::Dynamic> vtx, float size){
     draw_points(vtx.data(), (int)vtx.cols(), size);
 }
 
+void draw_circle(CircleParam param, int sides){
+    draw_circle(param.center, param.normal, param.radius, sides);
+}
+
 void draw_circle(Eigen::Vector3f center, Eigen::Vector3f normal, float radius, int sides){
     draw_circle(center(0), center(1), center(2), normal(0), normal(1), normal(2), radius, sides);
 }

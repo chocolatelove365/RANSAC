@@ -16,7 +16,8 @@
 #include <vector>
 #include <random>
 #include <float.h>
+#include "param.hpp"
 
-void ransac_circle_param(Eigen::Matrix<float, 3, Eigen::Dynamic> points, Eigen::Vector3f &center, Eigen::Vector3f &normal,  float &r, int max_loop, float threshold, int min_inliers);
+void ransac_circle_param(Eigen::Matrix<float, 3, Eigen::Dynamic> points, CircleParam &param, int max_loop, float threshold, int min_inliers);
 
 #endif /* calc_hpp */

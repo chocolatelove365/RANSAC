@@ -142,15 +142,10 @@ void disp(){
     Eigen::Matrix4d m_inv = m.inverse();
     glMultMatrixd(m_inv.data());
     if(rt.data() != NULL) glMultMatrixd(rt.data());
-    Eigen::Vector3f pred_center, pred_normal;
-    float pred_r;
-    Eigen::Vector3f pred_center2, pred_normal2;
-    float pred_r2;
-//    ransac_circle_param(points, pred_center, pred_normal, pred_r, 200, 0.1, 100);
-    ransac_circle_param(model_out_circle, pred_center, pred_normal, pred_r, 200, 0.05, 10);
-    ransac_circle_param(model_in_circle, pred_center2, pred_normal2, pred_r2, 200, 0.1, 10);
+    CircleParam param1, param2;
+    ransac_circle_param(model_out_circle, param1, 200, 0.05, 10);
+    ransac_circle_param(model_in_circle, param2, 200, 0.1, 10);
     draw_xyz_axis(2.f);
-    cout << "pred_normal:\n" << pred_normal << "\n";
     glColor4f(1.f, 1.f, 1.f, 1.f);
 #if 0
     draw_circle(center, normal, radius, 64);
@@ -161,10 +156,10 @@ void disp(){
     draw_points(model_points, 2.0f);
     glColor4f(0.f, 1.f, 1.f, 1.f);
     draw_points(model_out_circle, 4.0f);
-    draw_circle(pred_center, pred_normal, pred_r, 64);
+    draw_circle(param1, 64);
     glColor4f(0.f, 0.f, 1.f, 1.f);
     draw_points(model_in_circle, 4.0f);
-    draw_circle(pred_center2, pred_normal2, pred_r2, 64);
+    draw_circle(param2, 64);
     glutSwapBuffers();
 }
 
