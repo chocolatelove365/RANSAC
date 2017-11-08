@@ -21,7 +21,7 @@
 using json = nlohmann::json;
 using namespace std;
 
-Eigen::MatrixXf model_points, model_out_circle, model_in_circle;
+Eigen::MatrixXf model_points, model_out_circle, model_in_circle, model_square;
 
 double fov;
 double aspect;
@@ -77,6 +77,17 @@ bool load_model_json(const char *path){
         for(int i = 0; i < n; i++){
             for(int j = 0; j < m; j++){
                 model_in_circle(j, i) = model3[i][j];
+            }
+        }
+        std::vector<std::vector<double>> model4 = j["model_square"];
+        n = (int)model4.size();
+        if(n == 0) return false;
+        m = (int)model4[0].size();
+        if(m == 0) return false;
+        model_square = Eigen::MatrixXf(m, n);
+        for(int i = 0; i < n; i++){
+            for(int j = 0; j < m; j++){
+                model_square(j, i) = model4[i][j];
             }
         }
         return true;
@@ -143,27 +154,23 @@ void disp(){
     Eigen::Matrix4d m_inv = m.inverse();
     glMultMatrixd(m_inv.data());
     if(rt.data() != NULL) glMultMatrixd(rt.data());
-    CircleParam param1, param2;
+    Circle circle1, param2;
 //    ransac_circle_param(model_out_circle, param1, 200, 0.05, 10);
 //    ransac_circle_param(model_in_circle, param2, 200, 0.1, 10);
-    RANSAC<CircleParam> ransac;
-    ransac.update_param(model_in_circle, 200, 0.1, 10);
+    RANSAC<Circle> ransac_circle;
+//    RANSAC<Line> ransac_line;
+    ransac_circle.update(model_in_circle, circle1, 200, 0.1, 10);
+    cout << "radius: " << circle1.radius << "\n";
     draw_xyz_axis(2.f);
     glColor4f(1.f, 1.f, 1.f, 1.f);
-#if 0
-    draw_circle(center, normal, radius, 64);
-#endif
-#if 0
-    draw_points(points, 3.0f);
-#endif
-    draw_points(model_points, 2.0f);
+//    draw_points(model_points, 2.0f);
     glColor4f(0.f, 1.f, 1.f, 1.f);
     draw_points(model_out_circle, 4.0f);
-    draw_circle(param1, 64);
     glColor4f(0.f, 0.f, 1.f, 1.f);
     draw_points(model_in_circle, 4.0f);
-    draw_circle(ransac.param, 64);
-//    draw_circle(param2, 64);
+    draw_circle(circle1, 64);
+    glColor4f(1.f, 0.f, 1.f, 1.f);
+    draw_points(model_square, 4.0f);
     glutSwapBuffers();
 }
 
