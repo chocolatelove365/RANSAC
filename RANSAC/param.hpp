@@ -12,13 +12,13 @@
 #include <Eigen/Core>
 #include <Eigen/Geometry>
 
-struct CircleParam{
+struct Circle{
     Eigen::Vector3f center;
     Eigen::Vector3f normal;
     float radius;
 };
 
-struct LineParam{
+struct Line{
     Eigen::Vector3f p1, p2;
 };
 

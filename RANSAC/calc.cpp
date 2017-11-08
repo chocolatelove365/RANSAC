@@ -10,6 +10,7 @@
 
 using namespace std;
 
+/*********** COMMON **********/
 vector<int> get_ramdom_values(int num, int min, int max){
     random_device seed_gen;
     mt19937 engine(seed_gen());
@@ -21,15 +22,64 @@ vector<int> get_ramdom_values(int num, int min, int max){
     return result;
 }
 
+template <typename T>
+void RANSAC<T>::update(Eigen::Matrix<float, 3, Eigen::Dynamic> points, T &obj, int max_loop, float threshold, int min_inliers){
+    int n_points = (int)points.cols();
+    int n_samples = 3;
+    if(n_points < n_samples){
+        cout << "ERROR: At least " << n_samples << " points are needed to calculate the parameter of circle.\n";
+        return;
+    }
+    vector<float> good_error;
+    vector<T> good_param;
+    for(int i = 0; i < max_loop; i++){
+        Eigen::MatrixXf samples(3, n_samples);
+        T sample_param;
+        vector<int> id = get_ramdom_values(n_samples, 0, n_points-1);
+        for(int j = 0; j < n_samples; j++) samples.col(j) = points.col(id[j]);
+        calc_param(samples, sample_param);
+        Eigen::Matrix<float, 3, Eigen::Dynamic> inliers;
+        
+        for(int j = 0; j < n_points; j++){
+            float error = get_error(points.col(j), sample_param);
+            if(error > threshold) continue;
+            else{
+                inliers.conservativeResize(inliers.rows(), inliers.cols()+1);
+                inliers.col(inliers.cols()-1) = points.col(j);
+            }
+        }
+        if(inliers.cols() > min_inliers){
+            float current_error = 0;
+            for(int j = 0; j < n_points; j++) current_error += get_error(points.col(j), sample_param);
+            current_error /= n_points;
+            good_param.push_back(sample_param);
+            good_error.push_back(current_error);
+        }
+    }
+    
+    if(good_error.size() > 0){
+        int best_index = 0;
+        float best_error = FLT_MAX;
+        for(int i = 0; i < good_error.size(); i++){
+            if(good_error[i] < best_error){
+                best_error = good_error[i];
+                best_index = i;
+            }
+        }
+        obj = good_param[best_index];
+    }
+}
+
+/*********** CIRCLE **********/
 template <>
-float RANSAC<CircleParam>::get_error(Eigen::Vector3f point, CircleParam param){
+float RANSAC<Circle>::get_error(Eigen::Vector3f point, Circle param){
     Eigen::Vector3f v1 = point - param.center;
     Eigen::Vector3f v2 = param.normal.cross(v1.cross(param.normal));
     return (v1-v2).norm();
 }
 
 template <>
-void RANSAC<CircleParam>::calc_param(Eigen::Matrix<float, 2, Eigen::Dynamic> points, float &cx, float &cy, float &r){
+void RANSAC<Circle>::calc_param(Eigen::Matrix<float, 2, Eigen::Dynamic> points, float &cx, float &cy, float &r){
     if(points.cols() < 3){
         cout << "ERROR: At least 3 points are needed to calculate the parameter of circle.\n";
         return;
@@ -58,7 +108,7 @@ void RANSAC<CircleParam>::calc_param(Eigen::Matrix<float, 2, Eigen::Dynamic> poi
 }
 
 template <>
-void RANSAC<CircleParam>::calc_param(Eigen::Matrix3f points, CircleParam &param){
+void RANSAC<Circle>::calc_param(Eigen::Matrix3f points, Circle &param){
     Eigen::Matrix3f PT = points.transpose();
     Eigen::Matrix3f PT_inv = PT.inverse();
     Eigen::Vector3f z_axis = PT_inv * Eigen::Vector3f::Ones();
@@ -80,55 +130,29 @@ void RANSAC<CircleParam>::calc_param(Eigen::Matrix3f points, CircleParam &param)
     param.radius = _r;
 }
 
-template <typename Param>
-void RANSAC<Param>::update_param(Eigen::Matrix<float, 3, Eigen::Dynamic> points, int max_loop, float threshold, int min_inliers){
-    int n_points = (int)points.cols();
-    int n_samples = 3;
-    if(n_points < n_samples){
-        cout << "ERROR: At least " << n_samples << " points are needed to calculate the parameter of circle.\n";
-        return;
-    }
-    vector<float> good_error;
-    vector<Param> good_param;
-    for(int i = 0; i < max_loop; i++){
-        Eigen::MatrixXf samples(3, n_samples);
-        Param sample_param;
-        vector<int> id = get_ramdom_values(n_samples, 0, n_points-1);
-        for(int j = 0; j < n_samples; j++) samples.col(j) = points.col(id[j]);
-        calc_param(samples, sample_param);
-        Eigen::Matrix<float, 3, Eigen::Dynamic> inliers;
-
-        for(int j = 0; j < n_points; j++){
-            float error = get_error(points.col(j), sample_param);
-            if(error > threshold) continue;
-            else{
-                inliers.conservativeResize(inliers.rows(), inliers.cols()+1);
-                inliers.col(inliers.cols()-1) = points.col(j);
-            }
-        }
-        if(inliers.cols() > min_inliers){
-            float current_error = 0;
-            for(int j = 0; j < n_points; j++) current_error += get_error(points.col(j), sample_param);
-            current_error /= n_points;
-            good_param.push_back(sample_param);
-            good_error.push_back(current_error);
-        }
-    }
-    
-    if(good_error.size() > 0){
-        int best_index = 0;
-        float best_error = FLT_MAX;
-        for(int i = 0; i < good_error.size(); i++){
-            if(good_error[i] < best_error){
-                best_error = good_error[i];
-                best_index = i;
-            }
-        }
-        param = good_param[best_index];
-    }
+/*********** LINE **********/
+template <>
+float RANSAC<Line>::get_error(Eigen::Vector3f point, Line param){
+    return -1;
 }
 
-template class RANSAC<CircleParam>;
+template <>
+void RANSAC<Line>::calc_param(Eigen::Matrix<float, 2, Eigen::Dynamic> points, float &cx, float &cy, float &r){
+    
+}
+
+template <>
+void RANSAC<Line>::calc_param(Eigen::Matrix3f points, Line &param){
+    
+}
+
+template class RANSAC<Circle>;
+template class RANSAC<Line>;
+
+
+
+
+
 
 #if 0
 void ransac_circle_param(Eigen::Matrix<float, 3, Eigen::Dynamic> points, CircleParam &param, int max_loop, float threshold, int min_inliers){
