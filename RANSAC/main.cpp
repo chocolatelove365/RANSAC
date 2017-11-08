@@ -16,6 +16,7 @@
 #include "json.hpp"
 #include "draw.hpp"
 #include "calc.hpp"
+#include "param.hpp"
 
 using json = nlohmann::json;
 using namespace std;
@@ -143,8 +144,10 @@ void disp(){
     glMultMatrixd(m_inv.data());
     if(rt.data() != NULL) glMultMatrixd(rt.data());
     CircleParam param1, param2;
-    ransac_circle_param(model_out_circle, param1, 200, 0.05, 10);
-    ransac_circle_param(model_in_circle, param2, 200, 0.1, 10);
+//    ransac_circle_param(model_out_circle, param1, 200, 0.05, 10);
+//    ransac_circle_param(model_in_circle, param2, 200, 0.1, 10);
+    RANSAC<CircleParam> ransac;
+    ransac.update_param(model_in_circle, 200, 0.1, 10);
     draw_xyz_axis(2.f);
     glColor4f(1.f, 1.f, 1.f, 1.f);
 #if 0
@@ -159,7 +162,8 @@ void disp(){
     draw_circle(param1, 64);
     glColor4f(0.f, 0.f, 1.f, 1.f);
     draw_points(model_in_circle, 4.0f);
-    draw_circle(param2, 64);
+    draw_circle(ransac.param, 64);
+//    draw_circle(param2, 64);
     glutSwapBuffers();
 }
 

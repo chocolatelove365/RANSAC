@@ -18,4 +18,8 @@ struct CircleParam{
     float radius;
 };
 
+struct LineParam{
+    Eigen::Vector3f p1, p2;
+};
+
 #endif /* param_h */
