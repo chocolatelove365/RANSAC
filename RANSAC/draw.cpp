@@ -74,6 +74,29 @@ void draw_line(float a, float b, float min_x, float max_x){
     glDisableClientState(GL_VERTEX_ARRAY);
 }
 
+void draw_line(Eigen::Vector3f p1, Eigen::Vector3f p2){
+    float vtx[6];
+    vtx[0] = p1(0);
+    vtx[1] = p1(1);
+    vtx[2] = p1(2);
+    vtx[3] = p2(0);
+    vtx[4] = p2(1);
+    vtx[5] = p2(2);
+    glVertexPointer(3, GL_FLOAT, 0, vtx);
+    glEnableClientState(GL_VERTEX_ARRAY);
+    glDrawArrays(GL_LINES, 0, 2);
+    glDisableClientState(GL_VERTEX_ARRAY);
+}
+
+void draw_line(Line param, float length){
+    Eigen::Vector3f pos = param.position;
+    Eigen::Vector3f dir = param.direction;
+    Eigen::Vector3f p1, p2;
+    p1 = pos - 0.5* length * dir;
+    p2 = pos + 0.5* length * dir;
+    draw_line(p1, p2);
+}
+
 void draw_xyz_axis(float line_width){
     static const GLfloat vtx[] = {
         0.0f, 0.0f, 0.0f,

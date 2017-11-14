@@ -19,7 +19,8 @@ struct Circle{
 };
 
 struct Line{
-    Eigen::Vector3f p1, p2;
+    Eigen::Vector3f position;
+    Eigen::Vector3f direction;
 };
 
 #endif /* param_h */

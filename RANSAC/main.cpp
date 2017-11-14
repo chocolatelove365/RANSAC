@@ -15,13 +15,14 @@
 #include <random>
 #include "json.hpp"
 #include "draw.hpp"
-#include "calc.hpp"
+#include "ransac.hpp"
 #include "param.hpp"
 
 using json = nlohmann::json;
 using namespace std;
 
-Eigen::MatrixXf model_points, model_out_circle, model_in_circle;
+Eigen::MatrixXf model_points, model_out_circle, model_in_circle, model_square;
+Eigen::MatrixXf model_line1, model_line2, model_line3, model_line4;
 
 double fov;
 double aspect;
@@ -40,45 +41,41 @@ Eigen::Vector3f center(0.f, 0.f, 0.f);
 Eigen::Vector3f normal(2.f, 0.f, 2.f);
 Eigen::MatrixXf points(3, n_inliers+n_outliers);
 
+void convert_vector2d_to_matrix(std::vector<std::vector<double>> vec2d,  Eigen::MatrixXf &mat){
+    int n = (int)vec2d.size();
+    if(n == 0) return;
+    int m = (int)vec2d[0].size();
+    if(m == 0) return;
+    mat = Eigen::MatrixXf(m, n);
+    for(int i = 0; i < n; i++){
+        for(int j = 0; j < m; j++){
+            mat(j, i) = vec2d[i][j];
+        }
+    }
+}
+
 bool load_model_json(const char *path){
     std::ifstream input_json(path);
     if(input_json.is_open()){
         json j;
         input_json >> j;
         int m, n;
-        std::vector<std::vector<double>> model = j["model"];
-        n = (int)model.size();
-        if(n == 0) return false;
-        m = (int)model[0].size();
-        if(m == 0) return false;
-        model_points = Eigen::MatrixXf(m, n);
-        for(int i = 0; i < n; i++){
-            for(int j = 0; j < m; j++){
-                model_points(j, i) = model[i][j];
-            }
-        }
+        std::vector<std::vector<double>> model1 = j["model"];
+        convert_vector2d_to_matrix(model1, model_points);
         std::vector<std::vector<double>> model2 = j["model_out_circle"];
-        n = (int)model2.size();
-        if(n == 0) return false;
-        m = (int)model2[0].size();
-        if(m == 0) return false;
-        model_out_circle = Eigen::MatrixXf(m, n);
-        for(int i = 0; i < n; i++){
-            for(int j = 0; j < m; j++){
-                model_out_circle(j, i) = model2[i][j];
-            }
-        }
+        convert_vector2d_to_matrix(model2, model_out_circle);
         std::vector<std::vector<double>> model3 = j["model_in_circle"];
-        n = (int)model3.size();
-        if(n == 0) return false;
-        m = (int)model3[0].size();
-        if(m == 0) return false;
-        model_in_circle = Eigen::MatrixXf(m, n);
-        for(int i = 0; i < n; i++){
-            for(int j = 0; j < m; j++){
-                model_in_circle(j, i) = model3[i][j];
-            }
-        }
+        convert_vector2d_to_matrix(model3, model_in_circle);
+        std::vector<std::vector<double>> model4 = j["model_square"];
+        convert_vector2d_to_matrix(model4, model_square);
+        std::vector<std::vector<double>> model5 = j["model_line1"];
+        convert_vector2d_to_matrix(model5, model_line1);
+        std::vector<std::vector<double>> model6 = j["model_line2"];
+        convert_vector2d_to_matrix(model6, model_line2);
+        std::vector<std::vector<double>> model7 = j["model_line3"];
+        convert_vector2d_to_matrix(model7, model_line3);
+        std::vector<std::vector<double>> model8 = j["model_line4"];
+        convert_vector2d_to_matrix(model8, model_line4);
         return true;
     }
     else{
@@ -143,28 +140,34 @@ void disp(){
     Eigen::Matrix4d m_inv = m.inverse();
     glMultMatrixd(m_inv.data());
     if(rt.data() != NULL) glMultMatrixd(rt.data());
-    Circle circle1, param2;
-//    ransac_circle_param(model_out_circle, param1, 200, 0.05, 10);
-//    ransac_circle_param(model_in_circle, param2, 200, 0.1, 10);
+    Circle circle1, circle2;
+    Line line1, line2, line3, line4;
     RANSAC<Circle> ransac_circle;
-//    RANSAC<Line> ransac_line;
-    ransac_circle.update(model_in_circle, circle1, 200, 0.1, 10);
+    RANSAC<Line> ransac_line;
+    ransac_circle.calc(model_in_circle, circle1, 200, 0.1, 10);
+    ransac_circle.calc(model_out_circle, circle2, 200, 0.1, 10);
+    ransac_line.calc(model_line1, line1, 200, 0.1, 5);
+    ransac_line.calc(model_line2, line2, 200, 0.1, 5);
+    ransac_line.calc(model_line3, line3, 200, 0.1, 5);
+    ransac_line.calc(model_line4, line4, 200, 0.1, 5);
     draw_xyz_axis(2.f);
     glColor4f(1.f, 1.f, 1.f, 1.f);
-#if 0
-    draw_circle(center, normal, radius, 64);
-#endif
-#if 0
-    draw_points(points, 3.0f);
-#endif
     draw_points(model_points, 2.0f);
     glColor4f(0.f, 1.f, 1.f, 1.f);
     draw_points(model_out_circle, 4.0f);
-//    draw_circle(param1, 64);
+    draw_circle(circle2, 64);
     glColor4f(0.f, 0.f, 1.f, 1.f);
     draw_points(model_in_circle, 4.0f);
     draw_circle(circle1, 64);
-//    draw_circle(param2, 64);
+    glColor4f(1.f, 0.f, 1.f, 1.f);
+    draw_points(model_line1, 4.0f);
+    draw_line(line1, 100.0f);
+    draw_points(model_line2, 4.0f);
+    draw_line(line2, 100.0f);
+    draw_points(model_line3, 4.0f);
+    draw_line(line3, 100.0f);
+    draw_points(model_line4, 4.0f);
+    draw_line(line4, 100.0f);
     glutSwapBuffers();
 }
 

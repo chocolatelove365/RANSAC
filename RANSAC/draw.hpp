@@ -23,6 +23,8 @@ void draw_circle(Circle param, int sides);
 void draw_circle(Eigen::Vector3f center, Eigen::Vector3f normal, float radius, int sides);
 void draw_circle(float cx, float cy, float cz, float nx, float ny, float nz, float radius, int sides);
 void draw_line(float a, float b, float min_x, float max_x);
+void draw_line(Eigen::Vector3f p1, Eigen::Vector3f p2);
+void draw_line(Line param, float length);
 void draw_xyz_axis(float line_width=1.0);
 
 #endif /* object_hpp */

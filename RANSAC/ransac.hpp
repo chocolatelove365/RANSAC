@@ -20,11 +20,13 @@
 
 template <typename T>
 class RANSAC{
-    virtual float get_error(Eigen::Vector3f point, T obj);
-    virtual void calc_param(Eigen::Matrix<float, 2, Eigen::Dynamic> points, float &cx, float &cy, float &r);
-    virtual void calc_param(Eigen::Matrix3f points, T &obj);
+    int n_samples;
+    float get_error(Eigen::Vector3f point, T obj);
+    void calc_param(Eigen::Matrix<float, 2, Eigen::Dynamic> points, float &cx, float &cy, float &r);
+    void calc_with_samples(Eigen::Matrix<float, 3, Eigen::Dynamic> points, T &obj);
 public:
-    void update(Eigen::Matrix<float, 3, Eigen::Dynamic> points, T &obj, int max_loop, float threshold, int min_inliers);
+    RANSAC();
+    void calc(Eigen::Matrix<float, 3, Eigen::Dynamic> points, T &param, int max_loop, float threshold, int min_inliers);
 };
 
 #endif /* calc_hpp */
